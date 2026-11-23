@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Tetris</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:manipulation}
+:root{--W:min(100vw,56vh);--W:min(100vw,56dvh)}
+html,body{height:100%;margin:0;background:#1a1d24;overflow:hidden;font-family:system-ui,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+#gb{position:relative;width:var(--W);height:calc(var(--W)*1.68);font-size:calc(var(--W)/100);background:#cfcbbf;border-radius:3em 3em 18em 3em;box-shadow:inset 0 0 0 .5em #bab6aa,inset -1.5em -1.5em 4em rgba(0,0,0,.18);padding:6em 7em}
+#bezel{background:#5b5f6e;border-radius:2em 2em 12em 2em;padding:3em 9em 6em;position:relative}
+#bezel .t{color:#c9cad3;font-size:2em;letter-spacing:.15em;text-align:center;margin-bottom:2em;white-space:nowrap}
+#bezel .led{position:absolute;left:2.4em;top:20em;width:1.6em;height:1.6em;border-radius:50%;background:#e0243a;box-shadow:0 0 1em #e0243a}
+#bezel .led+i{position:absolute;left:.4em;top:23em;font:normal 1.5em sans-serif;color:#c9cad3}
+#lcd{position:relative;display:flex;align-items:flex-start;width:100%;height:72em;background:#9bbc0f;box-shadow:inset 0 0 1.5em rgba(15,56,15,.45);overflow:hidden}
+#board{display:block;border-right:.4em solid #0f380f;touch-action:none}
+#side{flex:1;padding:1.2em;color:#0f380f;font:bold 2.4em/1.15 monospace;text-align:center}
+#side div{margin-bottom:1.6em}
+#side b{display:block;font-size:1.25em}
+#next{display:block;margin:.3em auto 0;width:80%}
+#msg{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;background:rgba(155,188,15,.92);color:#0f380f;font:bold 4em/1.4 monospace}
+#logo{margin:3em 0 0 1em;font:italic 900 7.5em/1 "Arial Black",Impact,sans-serif;letter-spacing:-.02em;color:#2b2f77}
+#logo small{font:italic 600 .28em/1 sans-serif;letter-spacing:.2em;margin-left:1em;color:#2b2f77}
+button{font:inherit;border:0;padding:0;cursor:pointer;position:absolute}
+#dpad{position:absolute;left:5em;top:112em;width:36em;height:36em}
+#dpad>*{position:absolute;width:12em;height:12em;background:#2d2d33;color:#56565f;font-size:4em;display:flex;align-items:center;justify-content:center}
+#dpad>*:active{background:#1a1a1f}
+.u{left:12em;top:0;border-radius:2em 2em 0 0!important}.l{left:0;top:12em;border-radius:2em 0 0 2em!important}.r{left:24em;top:12em;border-radius:0 2em 2em 0!important}.dn{left:12em;top:24em;border-radius:0 0 2em 2em!important}.c{left:12em;top:12em}
+.ab{width:18em;height:18em;border-radius:50%;background:#a2234b;box-shadow:inset -.8em -.8em 1.6em rgba(0,0,0,.3),.5em .8em 1.2em rgba(0,0,0,.25)}
+.ab:active{background:#861b3d}
+.ab::after{content:attr(data-l);position:absolute;top:100%;left:0;right:0;margin-top:.6em;font:bold 4.4em sans-serif;color:#2b2f77}
+#ba{right:7em;top:112em}#bb{right:28em;top:122em}
+.pill{width:13em;height:4em;border-radius:2em;background:#8d8a8f;transform:rotate(-25deg);box-shadow:.2em .4em .6em rgba(0,0,0,.3)}
+.pill:active{background:#706d72}
+.pill::before{content:'';position:absolute;inset:-3.5em -1em}
+.pill::after{content:attr(data-l);position:absolute;top:130%;left:0;right:0;font:bold 2.3em sans-serif;letter-spacing:.1em;color:#2b2f77}
+#bse{left:36em;top:154em}#bs{left:56em;top:154em}
+#spk{position:absolute;right:6em;bottom:9em;width:22em;height:15em;transform:rotate(-30deg);background:repeating-linear-gradient(90deg,#8c897f 0 1em,transparent 1em 2.6em);border-radius:2em}
+</style>
+</head>
+<body>
+<div id="gb">
+ <div id="bezel">
+  <div class="t">DOT MATRIX WITH STEREO SOUND</div>
+  <div class="led"></div><i style="display:none"></i>
+  <div id="lcd">
+   <canvas id="board"></canvas>
+   <div id="side">
+    <div>SCORE<b id="sc">0</b></div>
+    <div>LIGNES<b id="ln">0</b></div>
+    <div>NIVEAU<b id="lv">1</b></div>
+    <div>SUIVANT<canvas id="next" width="64" height="64"></canvas></div>
+   </div>
+   <div id="msg"><span id="mt"></span></div>
+  </div>
+ </div>
+ <div id="logo">TETRIS<small>™ PORTABLE</small></div>
+ <div id="dpad"><button class="u" id="bu">▲</button><button class="l" id="bl">◀</button><div class="c"></div><button class="r" id="br">▶</button><button class="dn" id="bd">▼</button></div>
+ <button class="ab" id="bb" data-l="B"></button>
+ <button class="ab" id="ba" data-l="A"></button>
+ <button class="pill" id="bse" data-l="SELECT"></button>
+ <button class="pill" id="bs" data-l="START"></button>
+ <div id="spk"></div>
+</div>
+<script>
+const C=10,R=20,COL=['','#0f380f','#1f4a1f','#0f380f','#306230','#0f380f','#1f4a1f','#306230'];
+const SH=[[[1,1,1,1]],[[2,0,0],[2,2,2]],[[0,0,3],[3,3,3]],[[4,4],[4,4]],[[0,5,5],[5,5,0]],[[0,6,0],[6,6,6]],[[7,7,0],[0,7,7]]];
+const cv=document.getElementById('board'),cx=cv.getContext('2d'),nc=document.getElementById('next').getContext('2d');
+let S=24,grid,p,nx,bag=[],score,lines,level,over,paused,last,acc;
+function size(){S=Math.max(8,Math.floor(lcd.clientHeight/R));cv.width=C*S;cv.height=R*S;draw()}
+function rnd(){if(!bag.length){bag=[0,1,2,3,4,5,6];for(let i=6;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]]}}return SH[bag.pop()].map(r=>r.slice())}
+function rot(m){return m[0].map((_,i)=>m.map(r=>r[i]).reverse())}
+function hit(m,x,y){for(let j=0;j<m.length;j++)for(let i=0;i<m[j].length;i++)if(m[j][i]){const a=x+i,b=y+j;if(a<0||a>=C||b>=R||(b>=0&&grid[b][a]))return true}return false}
+function spawn(){p={m:nx||rnd(),x:0,y:0};nx=rnd();p.x=(C-p.m[0].length)/2|0;if(hit(p.m,p.x,p.y)){over=true;show('PERDU<br>'+score+'<br>START')}drawNext()}
+function reset(){grid=Array.from({length:R},()=>Array(C).fill(0));score=lines=0;level=1;over=paused=false;acc=0;nx=null;bag=[];spawn();hide();upd();draw()}
+function mv(dx){if(over||paused)return;if(!hit(p.m,p.x+dx,p.y)){p.x+=dx;draw()}}
+function turn(cw){if(over||paused)return;let m=rot(p.m);if(!cw)m=rot(rot(m));for(const k of[0,-1,1,-2,2])if(!hit(m,p.x+k,p.y)){p.m=m;p.x+=k;draw();return}}
+function drop(){if(over||paused)return false;if(!hit(p.m,p.x,p.y+1)){p.y++;draw();return true}lock();return false}
+function hard(){if(over||paused)return;let n=0;while(!hit(p.m,p.x,p.y+1)){p.y++;n++}score+=n*2;lock()}
+function lock(){p.m.forEach((r,j)=>r.forEach((v,i)=>{if(v&&p.y+j>=0)grid[p.y+j][p.x+i]=v}));let n=0;
+ for(let y=R-1;y>=0;y--)if(grid[y].every(v=>v)){grid.splice(y,1);grid.unshift(Array(C).fill(0));n++;y++}
+ if(n){score+=[0,100,300,500,800][n]*level;lines+=n;level=1+(lines/10|0)}
+ spawn();upd();draw()}
+function upd(){sc.textContent=score;ln.textContent=lines;lv.textContent=level}
+function cell(c,x,y,s,col){c.fillStyle=col;c.fillRect(x*s,y*s,s,s);c.strokeStyle='#9bbc0f';c.lineWidth=Math.max(1,s/10);c.strokeRect(x*s+s*.18,y*s+s*.18,s*.64,s*.64)}
+function draw(){if(!grid)return;cx.clearRect(0,0,cv.width,cv.height);
+ grid.forEach((r,y)=>r.forEach((v,x)=>v&&cell(cx,x,y,S,COL[v])));
+ if(p&&!over){let g=p.y;while(!hit(p.m,p.x,g+1))g++;
+  cx.globalAlpha=.25;p.m.forEach((r,j)=>r.forEach((v,i)=>v&&cell(cx,p.x+i,g+j,S,COL[v])));cx.globalAlpha=1;
+  p.m.forEach((r,j)=>r.forEach((v,i)=>v&&cell(cx,p.x+i,p.y+j,S,COL[v])))}}
+function drawNext(){nc.clearRect(0,0,64,64);const s=14,w=nx[0].length,h=nx.length,ox=(64-w*s)/2/s,oy=(64-h*s)/2/s;
+ nx.forEach((r,j)=>r.forEach((v,i)=>v&&cell(nc,ox+i,oy+j,s,COL[v])))}
+function show(t){mt.innerHTML=t;msg.style.display='flex'}
+function hide(){msg.style.display='none'}
+function pause(){if(over){reset();return}paused=!paused;paused?show('PAUSE'):hide()}
+msg.onclick=pause;
+function tap(el,f){el.addEventListener('pointerdown',e=>{e.preventDefault();f()})}
+function rep(el,f){let t,i;el.addEventListener('pointerdown',e=>{e.preventDefault();f();t=setTimeout(()=>{i=setInterval(f,70)},220)});
+ const st=()=>{clearTimeout(t);clearInterval(i)};['pointerup','pointerleave','pointercancel'].forEach(n=>el.addEventListener(n,st))}
+rep(bl,()=>mv(-1));rep(br,()=>mv(1));rep(bd,()=>{if(drop())score++,upd()});
+tap(bu,hard);tap(ba,()=>turn(true));tap(bb,()=>turn(false));tap(bs,pause);tap(bse,reset);
+addEventListener('keydown',e=>{const k=e.key;if(k==='ArrowLeft')mv(-1);else if(k==='ArrowRight')mv(1);else if(k==='ArrowDown'){if(drop())score++,upd()}else if(k==='ArrowUp'||k==='x')turn(true);else if(k==='z')turn(false);else if(k===' ')hard();else if(k==='p'||k==='Enter')pause();else return;e.preventDefault()});
+let tx,ty,tt,mx;
+cv.addEventListener('touchstart',e=>{const t=e.touches[0];tx=mx=t.clientX;ty=t.clientY;tt=Date.now()});
+cv.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0],d=t.clientX-mx;if(Math.abs(d)>S){mv(d>0?1:-1);mx=t.clientX}},{passive:false});
+cv.addEventListener('touchend',e=>{const t=e.changedTouches[0],dx=t.clientX-tx,dy=t.clientY-ty;
+ if(Math.abs(dx)<10&&Math.abs(dy)<10&&Date.now()-tt<250)turn(true);else if(dy>S*3&&Math.abs(dx)<S*2)hard()});
+function loop(t){requestAnimationFrame(loop);if(over||paused||!grid){last=t;return}
+ acc+=t-(last||t);last=t;const iv=Math.max(80,800-(level-1)*70);
+ if(acc>=iv){acc=0;drop()}}
+addEventListener('resize',size);size();reset();requestAnimationFrame(()=>{size();draw()});requestAnimationFrame(loop);
+</script>
+</body>
+</html>
